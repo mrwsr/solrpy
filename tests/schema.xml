@@ -2,7 +2,7 @@
 <schema name="solrpy_tests" version="1.1">
 
     <fieldType name="long" class="solr.TrieLongField" precisionStep="0" positionIncrementGap="0"/>
-    <fieldType name="date" class="solr.DateField" sortMissingLast="true" omitNorms="true" />
+    <fieldType name="date" class="solr.TrieDateField" sortMissingLast="true" omitNorms="true" />
     <fieldType name="string" class="solr.StrField" sortMissingLast="true" omitNorms="true" />
     <fieldType name="text" class="solr.TextField" sortMissingLast="true" omitNorms="true">
         <analyzer>
@@ -13,7 +13,7 @@
             <filter class="solr.PorterStemFilterFactory"/>
         </analyzer>
     </fieldType>
-    <fieldType name="sint" class="solr.SortableIntField" sortMissingLast="true" omitNorms="true" />
+    <fieldType name="sint" class="solr.TrieIntField" sortMissingLast="true" omitNorms="true" />
 
     <field name="id" type="string" indexed="true" stored="true" required="true" />
     <field name="user_id" type="string" indexed="true" stored="true" required="false" />
