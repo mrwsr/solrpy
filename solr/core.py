@@ -804,13 +804,7 @@ class SearchHandler(object):
         xml = self.raw(**params)
         return parse_query_response(StringIO(xml),  params, self)
 
-    def raw(self, **params):
-        """
-        Issue a query against a SOLR server.
-
-        Return the raw result.  No pre-processing or post-processing
-        happens to either input parameters or responses.
-        """
+    def prepare_query(self, params):
         # Clean up optional parameters to match SOLR spec.
         query = []
         for key, value in params.items():
@@ -819,13 +813,19 @@ class SearchHandler(object):
                 query.extend([(key, strify(v)) for v in value])
             else:
                 query.append((key, strify(value)))
-        request = urllib.urlencode(query, doseq=True)
+        return urllib.urlencode(query, doseq=True)
+
+    def raw(self, **params):
+        """
+        Issue a query against a SOLR server.
+
+        Return the raw result.  No pre-processing or post-processing
+        happens to either input parameters or responses.
+        """
+        request = self.prepare_query(params)
         conn = self.conn
         if conn.debug:
             logging.info("solrpy request: %s" % request)
-
-        for query_callback in self._query_callbacks:
-            request = query_callback(self, request)
 
         try:
             rsp = conn._post(self.selector, request, conn.form_headers)

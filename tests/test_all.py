@@ -1217,43 +1217,6 @@ class TestSolrConnectionSearchHandler(SolrConnectionTestCase):
         self.assertEqual(self.request_selector, SOLR_PATH + "/alternate/path")
         self.assertEqual(self.request_body, "q=id%3Afoobar")
 
-    def test_query_callbacks(self):
-        first_callback_calls = []
-        second_callback_calls = []
-
-        def first_callback(search_handler, request):
-            first_callback_calls.append((search_handler, request))
-            return "called", request
-
-        def second_callback(search_handler, request):
-            called, _request = request
-            second_callback_calls.append((search_handler, request))
-            return _request
-
-        conn = self.new_connection()
-        conn.select.register_query_callback(first_callback)
-        conn.select.register_query_callback(second_callback)
-
-        expected_q = "id:foobar"
-        conn.select(q=expected_q)
-
-        self.assertEqual(len(first_callback_calls), 1)
-        [(select, query)] = first_callback_calls
-
-        self.assertIs(select, conn.select)
-
-        parsed = urlparse.parse_qs(query)
-        self.assertIn("q", parsed)
-        self.assertEqual(parsed["q"], [expected_q])
-
-        self.assertEqual(len(second_callback_calls), 1)
-        [(select, (called, second_query))] = second_callback_calls
-
-        self.assertIs(select, conn.select)
-
-        self.assertEqual(called, "called")
-        self.assertEqual(second_query, query)
-
 
 class TestCommitingOptimizing(SolrConnectionTestCase):
 
