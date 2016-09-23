@@ -15,6 +15,7 @@ import unittest
 import httplib
 from string import digits
 from random import choice
+import urlparse
 from xml.dom.minidom import parseString
 
 # solrpy
@@ -983,7 +984,7 @@ class TestQuerying(SolrConnectionTestCase):
                 self.add(id=get_rand_string(), user_id=user_id, data=datum)
         self.conn.commit()
 
-        results = self.query(self.conn, 
+        results = self.query(self.conn,
             q="user_id:%s OR user_id:%s" % (user_ids[0], user_ids[1]),
             sort=["user_id asc", "data_sort desc"]).results
 
@@ -1140,17 +1141,17 @@ class TestQuerying(SolrConnectionTestCase):
 class EmptyResponse(object):
 
     _empty_results = '''\
-<response> 
-<lst name="responseHeader"> 
- <int name="status">0</int> 
- <int name="QTime">2</int> 
- <lst name="params"> 
-  <str name="q">keyword:ttestdocument</str> 
-  <str name="wt">standard</str> 
- </lst> 
-</lst> 
-<result name="response" numFound="0" start="0"/> 
-</response> 
+<response>
+<lst name="responseHeader">
+ <int name="status">0</int>
+ <int name="QTime">2</int>
+ <lst name="params">
+  <str name="q">keyword:ttestdocument</str>
+  <str name="wt">standard</str>
+ </lst>
+</lst>
+<result name="response" numFound="0" start="0"/>
+</response>
 '''
 
     _headers = {
@@ -1215,6 +1216,76 @@ class TestSolrConnectionSearchHandler(SolrConnectionTestCase):
         alternate.raw(q="id:foobar")
         self.assertEqual(self.request_selector, SOLR_PATH + "/alternate/path")
         self.assertEqual(self.request_body, "q=id%3Afoobar")
+
+    def test_query_callbacks(self):
+        first_callback_calls = []
+        second_callback_calls = []
+
+        def first_callback(search_handler, request):
+            first_callback_calls.append((search_handler, request))
+            return "called", request
+
+        def second_callback(search_handler, request):
+            called, _request = request
+            second_callback_calls.append((search_handler, request))
+            return _request
+
+        conn = self.new_connection()
+        conn.select.register_query_callback(first_callback)
+        conn.select.register_query_callback(second_callback)
+
+        expected_q = "id:foobar"
+        conn.select(q=expected_q)
+
+        self.assertEqual(len(first_callback_calls), 1)
+        [(select, query)] = first_callback_calls
+
+        self.assertIs(select, conn.select)
+
+        parsed = urlparse.parse_qs(query)
+        self.assertIn("q", parsed)
+        self.assertEqual(parsed["q"], [expected_q])
+
+        self.assertEqual(len(second_callback_calls), 1)
+        [(select, (called, second_query))] = second_callback_calls
+
+        self.assertIs(select, conn.select)
+
+        self.assertEqual(called, "called")
+        self.assertEqual(second_query, query)
+
+    def test_response_callbacks(self):
+        first_callback_calls = []
+        second_callback_calls = []
+
+        def first_callback(search_handler, response):
+            first_callback_calls.append((search_handler, response))
+            return "called", response
+
+        def second_callback(search_handler, response):
+            called, _response = response
+            second_callback_calls.append((search_handler, response))
+            return _response
+
+        conn = self.new_connection()
+        conn.select.register_response_callback(first_callback)
+        conn.select.register_response_callback(second_callback)
+
+        conn.select(q="id:foobar")
+
+        self.assertEqual(len(first_callback_calls), 1)
+        [(select, raw_response)] = first_callback_calls
+
+        self.assertIs(select, conn.select)
+        self.assertTrue(raw_response.startswith('<response>'))
+
+        self.assertEqual(len(second_callback_calls), 1)
+        [(select, (called, raw_response))] = second_callback_calls
+
+        self.assertIs(select, conn.select)
+
+        self.assertEqual(called, "called")
+        self.assertTrue(raw_response.startswith('<response>'))
 
 
 class TestCommitingOptimizing(SolrConnectionTestCase):

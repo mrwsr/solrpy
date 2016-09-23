@@ -52,8 +52,8 @@ Only `url` is required,.
     ssl_key, ssl_cert -- If using client-side key files for
         SSL authentication,  these should be, respectively,
         your PEM key file and certificate file
-        
-    http_user, http_pass -- If given, include HTTP Basic authentication 
+
+    http_user, http_pass -- If given, include HTTP Basic authentication
         in all request headers.
 
 Once created, a connection object has the following public methods:
@@ -253,7 +253,7 @@ from xml.sax.handler import ContentHandler
 from xml.sax.saxutils import escape, quoteattr
 from xml.dom.minidom import parseString
 
-__version__ = "0.9.6"
+__version__ = "0.9.7-shoprunner"
 
 __all__ = ['SolrException', 'Solr', 'SolrConnection',
            'Response', 'SearchHandler']
@@ -368,7 +368,7 @@ class Solr:
                 SSL authentication,  these should be, respectively,
                 your PEM key file and certificate file.
 
-            http_user, http_pass -- If given, include HTTP Basic authentication 
+            http_user, http_pass -- If given, include HTTP Basic authentication
                 in all request headers.
 
         """
@@ -420,14 +420,14 @@ class Solr:
         self.form_headers = {
             'Content-Type': 'application/x-www-form-urlencoded; charset=utf-8'}
         self.form_headers.update(post_headers)
-        
+
         if http_user is not None and http_pass is not None:
             http_auth = http_user + ':' + http_pass
             http_auth = 'Basic ' + http_auth.encode('base64').strip()
             self.auth_headers = {'Authorization': http_auth}
         else:
             self.auth_headers = {}
-        
+
         if not self.persistent:
             self.form_headers['Connection'] = 'close'
 
@@ -714,6 +714,15 @@ class SearchHandler(object):
         self.selector = conn.path + relpath
         self.arg_separator = arg_separator
 
+        self._query_callbacks = []
+        self._response_callbacks = []
+
+    def register_query_callback(self, callback):
+        self._query_callbacks.append(callback)
+
+    def register_response_callback(self, callback):
+        self._response_callbacks.append(callback)
+
     def __call__(self, q=None, fields=None, highlight=None,
                  score=True, sort=None, sort_order="asc", **params):
         """
@@ -819,6 +828,9 @@ class SearchHandler(object):
         if conn.debug:
             logging.info("solrpy request: %s" % request)
 
+        for query_callback in self._query_callbacks:
+            request = query_callback(self, request)
+
         try:
             rsp = conn._post(self.selector, request, conn.form_headers)
             data = rsp.read()
@@ -827,6 +839,9 @@ class SearchHandler(object):
         finally:
             if not conn.persistent:
                 conn.close()
+
+        for response_callback in self._response_callbacks:
+            data = response_callback(self, data)
 
         return data
 
