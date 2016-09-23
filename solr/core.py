@@ -715,13 +715,9 @@ class SearchHandler(object):
         self.arg_separator = arg_separator
 
         self._query_callbacks = []
-        self._response_callbacks = []
 
     def register_query_callback(self, callback):
         self._query_callbacks.append(callback)
-
-    def register_response_callback(self, callback):
-        self._response_callbacks.append(callback)
 
     def __call__(self, q=None, fields=None, highlight=None,
                  score=True, sort=None, sort_order="asc", **params):
@@ -839,9 +835,6 @@ class SearchHandler(object):
         finally:
             if not conn.persistent:
                 conn.close()
-
-        for response_callback in self._response_callbacks:
-            data = response_callback(self, data)
 
         return data
 

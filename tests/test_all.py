@@ -1254,39 +1254,6 @@ class TestSolrConnectionSearchHandler(SolrConnectionTestCase):
         self.assertEqual(called, "called")
         self.assertEqual(second_query, query)
 
-    def test_response_callbacks(self):
-        first_callback_calls = []
-        second_callback_calls = []
-
-        def first_callback(search_handler, response):
-            first_callback_calls.append((search_handler, response))
-            return "called", response
-
-        def second_callback(search_handler, response):
-            called, _response = response
-            second_callback_calls.append((search_handler, response))
-            return _response
-
-        conn = self.new_connection()
-        conn.select.register_response_callback(first_callback)
-        conn.select.register_response_callback(second_callback)
-
-        conn.select(q="id:foobar")
-
-        self.assertEqual(len(first_callback_calls), 1)
-        [(select, raw_response)] = first_callback_calls
-
-        self.assertIs(select, conn.select)
-        self.assertTrue(raw_response.startswith('<response>'))
-
-        self.assertEqual(len(second_callback_calls), 1)
-        [(select, (called, raw_response))] = second_callback_calls
-
-        self.assertIs(select, conn.select)
-
-        self.assertEqual(called, "called")
-        self.assertTrue(raw_response.startswith('<response>'))
-
 
 class TestCommitingOptimizing(SolrConnectionTestCase):
 
