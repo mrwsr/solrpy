@@ -253,7 +253,7 @@ from xml.sax.handler import ContentHandler
 from xml.sax.saxutils import escape, quoteattr
 from xml.dom.minidom import parseString
 
-__version__ = "0.9.7-shoprunner"
+__version__ = "0.9.7-shoprunner-001'
 
 __all__ = ['SolrException', 'Solr', 'SolrConnection',
            'Response', 'SearchHandler']
@@ -1047,7 +1047,7 @@ class ResponseContentHandler(ContentHandler):
         elif name in ('lst','doc'):
             # Represent these with a dict
             node.final = dict(
-                    [(cnode.attrs['name'], cnode.final)
+                    [(cnode.attrs.get('name'), cnode.final)
                         for cnode in node.children])
 
         elif name in ('arr',):
